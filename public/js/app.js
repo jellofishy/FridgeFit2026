@@ -1,5 +1,6 @@
 // Fridge Fit: app shell, views and actions.
-import { state, save, saveNow, uid, activeProfiles, resetAll } from './store.js';
+import { state, save, saveNow, uid, activeProfiles, resetAll, hooks, adopt, isPristine, cloudPayload } from './store.js';
+import * as auth from './auth.js';
 import {
   DIETS, ALLERGIES, LOCATIONS, CATEGORY_EMOJI, COMMON_ITEMS, GREETINGS, MEALS, TIME_FILTERS, MOODS, GOALS, LABEL_REMINDER,
 } from './data.js';
@@ -20,7 +21,7 @@ import { $, $$, esc, toast, pushLayer, swapTop, closeTop, topLayer, confirmBox, 
 const ui = {
   tab: 'home', stack: [], swapping: false,
   filters: { meal: '', time: '', mood: '', cuisine: '', goal: '', expiring: false, weather: false },
-  subUse: {}, scan: null, showMore: false, health: null, aiBusy: false, greetIdx: 0, finish: null, leftover: { text: '', ideas: null, ai: [], busy: false },
+  subUse: {}, scan: null, auth: { mode: 'signin', busy: false, msg: '', err: '', email: '' }, sync: {}, syncedFor: null, showMore: false, health: null, aiBusy: false, greetIdx: 0, finish: null, leftover: { text: '', ideas: null, ai: [], busy: false },
 };
 
 const TABS = [
@@ -339,6 +340,7 @@ function viewMe() {
   const s = state.settings, openCount = state.shopping.filter(i => !i.done).length;
   const health = ui.health;
   return `<section class="block"><h1 class="title">Me</h1>
+    ${accountCard()}
     <h2 class="h">Profiles <span class="count">${state.profiles.length}</span></h2>
     <p class="muted small">Save each person's diet and allergies. Pick who's eating on the Home tab and recipes will work for everyone.</p>
     <ul class="profiles">${state.profiles.map(p => `<li class="pcard"><span class="pav">${esc(p.emoji)}</span><div class="pinfo"><b>${esc(p.name)}</b>
@@ -364,6 +366,18 @@ function viewMe() {
   <section class="block"><h2 class="h">Your data</h2><p class="muted small">Everything is saved in this browser only. No account needed.</p>
     <div class="row gap wrap"><button class="btn ghost small" data-act="export">⬇️ Export backup</button><button class="btn ghost small danger" data-act="reset">Reset everything</button></div>
     <p class="muted small center">Fridge Fit · made with 🧡</p></section>`;
+}
+
+function accountCard() {
+  const u = auth.currentUser();
+  if (!u) {
+    return `<div class="card account"><h3>☁️ Account</h3><p class="muted">Sign in with your email to keep your profiles, kitchen and Made list safe and synced across your devices.</p>
+      <button class="btn primary" data-act="open-auth">Sign in or create account</button></div>`;
+  }
+  const sy = ui.sync;
+  return `<div class="card account"><h3>☁️ ${esc(u.email)}</h3>
+    <p class="${sy.err ? 'warn-text' : 'muted'} small" role="status">${esc(sy.status || 'Signed in')}${sy.at && !sy.err ? ' · ' + new Date(sy.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : ''}</p>
+    <div class="row gap wrap"><button class="btn soft small" data-act="sync-now">🔄 Sync now</button><button class="btn ghost small" data-act="sign-out">Sign out</button><button class="link danger small" data-act="sign-out-clear">Sign out & clear this device</button></div></div>`;
 }
 
 const VIEWS = { home: viewHome, fridge: viewFridge, recipes: viewRecipes, made: viewMade, me: viewMe };
@@ -502,6 +516,28 @@ LAYER_RENDER.profile = arg => {
     </div>
   </div>`;
 };
+
+// ====================================================================== layers: account
+LAYER_RENDER.auth = () => {
+  const a = ui.auth, m = a.mode;
+  const title = m === 'signup' ? 'Create your account' : m === 'reset' ? 'Reset your password' : 'Welcome back';
+  return `<div class="sheet-head"><button class="icon-btn" data-act="close-layer" aria-label="Close">←</button><h2>${title}</h2></div>
+  <div class="pad">
+    ${m !== 'reset' ? `<div class="seg wide-seg" role="group" aria-label="Sign in or create account"><button class="${m === 'signin' ? 'on' : ''}" data-act="auth-mode" data-val="signin">Sign in</button><button class="${m === 'signup' ? 'on' : ''}" data-act="auth-mode" data-val="signup">Create account</button></div>` : '<p class="muted">Enter your email and we\'ll send you a link to choose a new password.</p>'}
+    <form data-form="auth" autocomplete="on" novalidate>
+      <label class="field"><span>Email</span><input id="authEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" required value="${esc(a.email)}" placeholder="you@example.com"></label>
+      ${m !== 'reset' ? `<label class="field"><span>Password${m === 'signup' ? ' (8+ characters)' : ''}</span><input id="authPw" type="password" autocomplete="${m === 'signup' ? 'new-password' : 'current-password'}" minlength="8" required></label>` : ''}
+      ${a.err ? `<p class="warn-box" role="alert">${esc(a.err)}</p>` : ''}${a.msg ? `<p class="safe-box" role="status">${esc(a.msg)}</p>` : ''}
+      <button class="btn primary wide" type="submit" ${a.busy ? 'disabled' : ''}>${a.busy ? 'One moment…' : m === 'signup' ? 'Create account' : m === 'reset' ? 'Send reset link' : 'Sign in'}</button>
+    </form>
+    <div class="center">${m === 'signin' ? '<button class="link" data-act="auth-mode" data-val="reset">Forgot your password?</button>' : m === 'reset' ? '<button class="link" data-act="auth-mode" data-val="signin">Back to sign in</button>' : ''}</div>
+    <p class="muted small center">We only use your email to sign you in. Your profiles and history sync to your account so you can use them on any device.</p>
+  </div>`;
+};
+
+LAYER_RENDER.newpass = () => `<div class="sheet-head"><h2>Choose a new password</h2></div>
+  <div class="pad"><form data-form="newpass"><label class="field"><span>New password (8+ characters)</span><input id="newPw" type="password" autocomplete="new-password" minlength="8" required></label>
+  ${ui.auth.err ? `<p class="warn-box" role="alert">${esc(ui.auth.err)}</p>` : ''}<button class="btn primary wide" type="submit">Save password</button></form></div>`;
 
 // ====================================================================== layers: scan
 LAYER_RENDER.scanpick = kind => `<div class="sheet-head"><button class="icon-btn" data-act="close-layer" aria-label="Close">←</button><h2>Scan your ${kind === 'spices' ? 'spice rack' : kind === 'leftovers' ? 'leftovers' : kind}</h2></div>
@@ -797,6 +833,14 @@ const ACTIONS = {
     state.active = state.active.filter(id => id !== draft.id); if (!state.active.length) state.active = [state.profiles[0].id];
     closeTop(); commit();
   },
+  'open-auth': () => { ui.auth = { mode: 'signin', busy: false, msg: '', err: '', email: ui.auth.email }; openLayer('auth', null, { cls: 'small' }); },
+  'auth-mode': el => { ui.auth = { ...ui.auth, mode: el.dataset.val, msg: '', err: '', email: $('#authEmail')?.value || ui.auth.email }; repaintTop(); },
+  'sync-now': () => cloudPush(true),
+  'sign-out': async () => { await auth.signOut(); toast('Signed out. Your data stays on this device.'); },
+  'sign-out-clear': async () => {
+    if (!await confirmBox('Sign out and remove all saved data from this device? Your account keeps its copy.', { ok: 'Sign out & clear' })) return;
+    await cloudPush(false).catch(() => {}); await auth.signOut(); resetAll();
+  },
   locate: () => locate(),
   'clear-location': () => { state.settings.loc = null; state.weather = null; commit(); },
   'ai-more': () => aiMore(),
@@ -827,6 +871,28 @@ async function keepPhoto(shared) {
 }
 
 const FORMS = {
+  auth: async () => {
+    const a = ui.auth, email = $('#authEmail').value.trim(), pw = $('#authPw') ? $('#authPw').value : '';
+    a.email = email; a.err = ''; a.msg = '';
+    if (!/^\S+@\S+\.\S+$/.test(email)) { a.err = 'Please enter a valid email address.'; return repaintTop(); }
+    if (a.mode !== 'reset' && pw.length < 8) { a.err = 'Your password needs at least 8 characters.'; return repaintTop(); }
+    a.busy = true; repaintTop();
+    try {
+      if (a.mode === 'reset') { await auth.resetPassword(email); a.msg = 'If that email has an account, a reset link is on its way. Check your inbox (and spam).'; }
+      else if (a.mode === 'signup') {
+        const r = await auth.signUp(email, pw);
+        if (r.needsConfirm) a.msg = 'Almost there! We sent a confirmation link to your email. Tap it, then come back and sign in.';
+        else { a.busy = false; closeTop(); toast('Account created. Welcome! 🎉'); return; }
+      } else { await auth.signIn(email, pw); a.busy = false; closeTop(); toast('Signed in 👋'); return; }
+    } catch (e) { a.err = e.message; }
+    a.busy = false; repaintTop();
+  },
+  newpass: async () => {
+    const pw = $('#newPw').value;
+    if (pw.length < 8) { ui.auth.err = 'Your password needs at least 8 characters.'; return repaintTop(); }
+    try { await auth.setNewPassword(pw); ui.auth.err = ''; closeTop(); toast('Password updated 🔒'); }
+    catch (e) { ui.auth.err = e.message; repaintTop(); }
+  },
   'add-item': form => {
     const name = $('#addItem').value, loc = $('#addLoc').value;
     if (addPantryItem(name, loc)) { toast(`Added ${name.trim().toLowerCase()}`); }
@@ -909,6 +975,53 @@ for (const id of ['fileCam', 'fileGallery']) {
   });
 }
 
+// ====================================================================== account sync
+let cloudTimer;
+function scheduleCloud() { clearTimeout(cloudTimer); cloudTimer = setTimeout(() => cloudPush(false).catch(() => {}), 2000); }
+
+async function cloudPush(manual) {
+  if (!auth.currentUser()) return;
+  ui.sync = { status: 'Syncing…' }; if (ui.tab === 'me') render();
+  try {
+    await auth.pushState(cloudPayload());
+    ui.sync = { status: 'Synced', at: Date.now() };
+    if (manual) toast('Synced ☁️');
+  } catch (e) {
+    ui.sync = { status: "Couldn't sync: " + e.message, err: true };
+    if (manual) toast(ui.sync.status);
+  }
+  if (ui.tab === 'me') render();
+}
+
+async function cloudStart(user) {
+  ui.sync = { status: 'Syncing…' }; if (ui.tab === 'me') render();
+  try {
+    const row = await auth.pullState();
+    const remote = row && row.data && row.data.v === 1 ? row.data : null;
+    if (!remote) await auth.pushState(cloudPayload());
+    else if (isPristine()) { adopt(remote); toast('Welcome back! Your data is loaded ☁️'); }
+    else {
+      await new Promise(r => setTimeout(r, 400));
+      const useCloud = await confirmBox("Your account already has saved data, and this device has different data. Which should we keep?", { ok: 'Use my account data', cancel: 'Keep this device' });
+      if (useCloud) { adopt(remote); toast('Loaded your account data ☁️'); } else await auth.pushState(cloudPayload());
+    }
+    hooks.afterSave = scheduleCloud;
+    ui.sync = { status: 'Synced', at: Date.now() };
+  } catch (e) {
+    ui.sync = { status: "Couldn't sync: " + e.message, err: true };
+  }
+  render(); repaintTop();
+}
+
+function initAccount() {
+  auth.onAuth(async (event, user) => {
+    if (event === 'PASSWORD_RECOVERY') { ui.auth.err = ''; openLayer('newpass', null, { cls: 'small' }); return; }
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && user && ui.syncedFor !== user.id) { ui.syncedFor = user.id; await cloudStart(user); }
+    else if (event === 'SIGNED_OUT') { ui.syncedFor = null; hooks.afterSave = null; ui.sync = {}; render(); }
+  });
+  if (auth.shouldInit()) auth.getClient().catch(() => { /* offline: stay signed out until next load */ });
+}
+
 // ====================================================================== notifications & boot
 function maybeNotify() {
   if (!state.settings.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
@@ -923,6 +1036,7 @@ function maybeNotify() {
 }
 
 function boot() {
+  initAccount();
   $('#tabbar').innerHTML = TABS.map(t => `<button data-act="nav" data-tab="${t.id}"><span class="ti">${t.icon}</span><span>${t.label}</span></button>`).join('');
   const hash = location.hash.replace('#', '');
   ui.tab = VIEWS[hash] ? hash : 'home';

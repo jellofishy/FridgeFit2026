@@ -57,6 +57,18 @@ netlify dev               # http://localhost:8888, serves the site and the funct
 npm test                  # runs the diet/allergy safety tests
 ```
 
+## Email login & cloud sync (Supabase)
+
+Optional email + password accounts, powered by [Supabase](https://supabase.com). Signed-in users get their profiles, kitchen, shopping list, Made history and settings saved to their account and synced across devices. Signed-out use still works exactly as before (data stays in the browser).
+
+- The database table `public.user_state` (one JSON row per user) has Row Level Security, so each person can only read and write their own row.
+- `public/js/config.js` holds the Supabase URL and **publishable** key. These are meant to be public; the RLS rules are what protect the data. Never put a `service_role` key in this repo.
+- **One-time setup in the Supabase dashboard** (Authentication → URL Configuration):
+  1. **Site URL**: set to your Netlify URL, e.g. `https://your-site.netlify.app`.
+  2. **Redirect URLs**: add the same URL (and `http://localhost:8888` if you use `netlify dev`). Confirmation and password-reset emails link back here.
+  3. (Optional) Authentication → Sign In / Providers → Email: turn off **Confirm email** for instant sign-up, or leave it on and users confirm via an emailed link.
+  4. (Recommended before launch) Authentication → SMTP Settings: add your own email provider. Supabase's built-in sender is limited to a few emails per hour and is meant for testing.
+
 ## Notes & limits
 
 - **Voice**: speech input needs Chrome, Edge or Safari. Read-aloud works almost everywhere. Text input is always available as a fallback.

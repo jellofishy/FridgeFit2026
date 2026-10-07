@@ -292,3 +292,8 @@ body:has(.cookmode.open) .toast { bottom: 150px; }
 
 @media (min-width: 720px) { .layer { align-items: center; } .layer-panel { border-radius: 26px; } .layer.full .layer-panel { height: 90dvh; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* ---------- account */
+.card.account { margin-top: 8px; } .card.account .btn { margin-top: 8px; } .card.account .small { margin: 4px 0 8px; }
+.warn-text { color: var(--danger); }
+.seg.wide-seg { display: flex; margin-bottom: 8px; } .seg.wide-seg button { flex: 1; padding: 10px; }
