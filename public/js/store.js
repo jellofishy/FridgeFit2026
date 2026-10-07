@@ -39,7 +39,10 @@ function load() {
 export const state = load();
 
 let timer;
+export const hooks = { afterSave: null };
+
 export function save() {
+  state.updatedAt = Date.now();
   clearTimeout(timer);
   timer = setTimeout(saveNow, 150);
 }
@@ -48,6 +51,7 @@ export function saveNow() {
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
     localStorage.setItem(THEME_KEY, state.settings.theme);
+    if (hooks.afterSave) hooks.afterSave();
   } catch (e) {
     // storage full (usually photos): drop the oldest photos and retry once
     const withPhoto = state.made.filter(m => m.photo).reverse();
@@ -64,3 +68,27 @@ export function resetAll() {
 }
 
 export const activeProfiles = () => state.profiles.filter(p => state.active.includes(p.id));
+
+/** Replace local data with a cloud copy (keeps device-only settings). */
+export function adopt(remote) {
+  const d = defaults();
+  const keep = { accessCode: state.settings.accessCode, theme: state.settings.theme, loc: state.settings.loc };
+  for (const k of Object.keys(state)) delete state[k];
+  Object.assign(state, d, remote, { settings: { ...d.settings, ...(remote.settings || {}), ...keep }, stats: { ...d.stats, ...(remote.stats || {}) }, seen: { ...d.seen, ...(remote.seen || {}), welcome: true }, weather: null });
+  if (!state.profiles.length) state.profiles = d.profiles;
+  state.active = (state.active || []).filter(id => state.profiles.some(p => p.id === id));
+  if (!state.active.length) state.active = [state.profiles[0].id];
+  saveNow();
+}
+
+export function isPristine() {
+  const p = state.profiles[0];
+  return !state.made.length && !state.pantry.length && !state.shopping.length && !state.aiRecipes.length
+    && state.profiles.length === 1 && !p.diets.length && !p.allergies.length && !p.avoid;
+}
+
+/** Data that goes to the cloud: everything except weather cache and the device-only access code. */
+export function cloudPayload() {
+  const { weather, ...rest } = state;
+  return { ...rest, settings: { ...rest.settings, accessCode: '' } };
+}
