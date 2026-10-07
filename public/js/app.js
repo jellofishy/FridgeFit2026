@@ -388,6 +388,13 @@ function render() {
   $$('#tabbar button').forEach(b => { const on = b.dataset.tab === ui.tab; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
   const open = state.shopping.filter(i => !i.done).length;
   const badge = $('#shopBadge'); badge.textContent = open; badge.hidden = !open;
+  const ab = $('#accountBtn');
+  if (ab) {
+    const u = auth.currentUser();
+    ab.textContent = u ? (u.email || '?')[0].toUpperCase() : '👤';
+    ab.classList.toggle('in', !!u);
+    ab.setAttribute('aria-label', u ? `Account: ${u.email}` : 'Account: sign in');
+  }
   applyTheme();
 }
 
@@ -1072,6 +1079,7 @@ function boot() {
 }
 
 $('#themeBtn').addEventListener('click', () => ACTIONS['toggle-theme']());
+$('#accountBtn').addEventListener('click', () => { if (auth.currentUser()) go('me'); else ACTIONS['open-auth'](); });
 $('#shopBtn').addEventListener('click', () => ACTIONS['open-shopping']());
 boot();
 window.__fridgefit = { state, ui, go };
