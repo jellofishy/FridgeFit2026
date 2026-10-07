@@ -300,3 +300,7 @@ body:has(.cookmode.open) .toast { bottom: 150px; }
 .btn.apple { background: #000; color: #fff; margin-top: 4px; } :root[data-theme="dark"] .btn.apple { background: #fff; color: #000; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.apple { background: #fff; color: #000; } }
 .or { text-align: center; color: var(--muted); font-size: .85rem; margin: 12px 0; display: flex; align-items: center; gap: 10px; } .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* account button in the top bar; keep the tab bar clear of the bottom-right corner (Netlify badge, home indicator) */
+.account-btn.in { background: var(--primary); color: var(--primary-ink); border-color: transparent; font-weight: 800; }
+.tabbar { padding-right: max(56px, env(safe-area-inset-right)); padding-left: 8px; }
