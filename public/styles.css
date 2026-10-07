@@ -304,3 +304,6 @@ body:has(.cookmode.open) .toast { bottom: 150px; }
 /* account button in the top bar; keep the tab bar clear of the bottom-right corner (Netlify badge, home indicator) */
 .account-btn.in { background: var(--primary); color: var(--primary-ink); border-color: transparent; font-weight: 800; }
 .tabbar { padding-right: max(56px, env(safe-area-inset-right)); padding-left: 8px; }
+.acct-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; } .acct-who { flex: 1; min-width: 0; } .acct-who h3 { margin: 0; overflow: hidden; text-overflow: ellipsis; }
+.acct-av { width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: var(--primary-ink); display: grid; place-items: center; font: 800 1.3rem var(--font); flex: 0 0 auto; }
+input:disabled { opacity: .6; } input[type=number] { border: 1.5px solid var(--border); background: var(--surface); border-radius: 14px; padding: 11px 14px; min-height: 46px; width: 100%; }
