@@ -15,7 +15,7 @@ import { getPosition, fetchWeather, geocode, weatherMode, weatherBlurb, fmtTemp 
 import { resizeToDataUrl, composeShareImage, thumbnail, shareImage } from './share.js';
 import { startCooking } from './cook.js';
 import { canListen, canSpeak } from './voice.js';
-import { $, $$, esc, toast, pushLayer, swapTop, closeTop, topLayer, confirmBox, closeAllLayers } from './ui.js';
+import { $, $$, esc, toast, pushLayer, swapTop, closeTop, topLayer, confirmBox, closeAllLayers, layerCount } from './ui.js';
 
 // ====================================================================== state & helpers
 const ui = {
@@ -371,11 +371,13 @@ function viewMe() {
 function accountCard() {
   const u = auth.currentUser();
   if (!u) {
-    return `<div class="card account"><h3>☁️ Account</h3><p class="muted">Sign in with your email to keep your profiles, kitchen and Made list safe and synced across your devices.</p>
+    return `<div class="card account"><h3>☁️ Account</h3><p class="muted">Sign in to keep your profiles, kitchen and Made list safe and synced across your devices.</p>
       <button class="btn primary" data-act="open-auth">Sign in or create account</button></div>`;
   }
-  const sy = ui.sync;
-  return `<div class="card account"><h3>☁️ ${esc(u.email)}</h3>
+  const name = auth.accountName(u), age = u.user_metadata?.age, sy = ui.sync;
+  return `<div class="card account"><div class="acct-head"><span class="acct-av" aria-hidden="true">${esc((name || u.email || '?')[0].toUpperCase())}</span>
+      <div class="acct-who"><h3>${name ? esc(name) : 'Welcome!'}</h3><p class="muted small">${esc(u.email)}${age ? ` · age ${esc(age)}` : ''}</p></div>
+      <button class="btn ghost small" data-act="edit-account">${name ? 'Edit' : 'Add your name'}</button></div>
     <p class="${sy.err ? 'warn-text' : 'muted'} small" role="status">${esc(sy.status || 'Signed in')}${sy.at && !sy.err ? ' · ' + new Date(sy.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : ''}</p>
     <div class="row gap wrap"><button class="btn soft small" data-act="sync-now">🔄 Sync now</button><button class="btn ghost small" data-act="sign-out">Sign out</button><button class="link danger small" data-act="sign-out-clear">Sign out & clear this device</button></div></div>`;
 }
@@ -391,9 +393,9 @@ function render() {
   const ab = $('#accountBtn');
   if (ab) {
     const u = auth.currentUser();
-    ab.textContent = u ? (u.email || '?')[0].toUpperCase() : '👤';
+    ab.textContent = u ? (auth.accountName(u) || u.email || '?')[0].toUpperCase() : '👤';
     ab.classList.toggle('in', !!u);
-    ab.setAttribute('aria-label', u ? `Account: ${u.email}` : 'Account: sign in');
+    ab.setAttribute('aria-label', u ? `Account: ${auth.accountName(u) || u.email}` : 'Account: sign in');
   }
   applyTheme();
 }
@@ -415,8 +417,8 @@ let greetings = [], greetTimer = null;
 function currentGreeting() { return greetings[ui.greetIdx % greetings.length]; }
 function shuffleGreetings() {
   greetings = [...GREETINGS, ...prefixByHour()].sort(() => Math.random() - 0.5);
-  const name = state.profiles[0]?.name;
-  if (name && name !== 'Me' && state.profiles.length === 1) greetings.push(`Hi ${name}`);
+  const name = auth.accountName() || (state.profiles.length === 1 ? state.profiles[0]?.name : '');
+  if (name && name !== 'Me') greetings.push(`Hi ${name}`, `Hey ${name}, what's cooking?`, `Hungry, ${name}?`);
   ui.greetIdx = 0;
 }
 function startGreeting() {
@@ -534,6 +536,7 @@ LAYER_RENDER.auth = () => {
     ${m !== 'reset' ? `<div class="seg wide-seg" role="group" aria-label="Sign in or create account"><button class="${m === 'signin' ? 'on' : ''}" data-act="auth-mode" data-val="signin">Sign in</button><button class="${m === 'signup' ? 'on' : ''}" data-act="auth-mode" data-val="signup">Create account</button></div>` : '<p class="muted">Enter your email and we\'ll send you a link to choose a new password.</p>'}
     <form data-form="auth" autocomplete="on" novalidate>
       <label class="field"><span>Email</span><input id="authEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" required value="${esc(a.email)}" placeholder="you@example.com"></label>
+      ${m === 'signup' ? `<label class="field"><span>Your name (optional)</span><input id="authName" autocomplete="given-name" maxlength="40" value="${esc(a.name || '')}" placeholder="What should we call you?"></label>` : ''}
       ${m !== 'reset' ? `<label class="field"><span>Password${m === 'signup' ? ' (8+ characters)' : ''}</span><input id="authPw" type="password" autocomplete="${m === 'signup' ? 'new-password' : 'current-password'}" minlength="8" required></label>` : ''}
       ${a.err ? `<p class="warn-box" role="alert">${esc(a.err)}</p>` : ''}${a.msg ? `<p class="safe-box" role="status">${esc(a.msg)}</p>` : ''}
       <button class="btn primary wide" type="submit" ${a.busy ? 'disabled' : ''}>${a.busy ? 'One moment…' : m === 'signup' ? 'Create account' : m === 'reset' ? 'Send reset link' : 'Sign in'}</button>
@@ -541,6 +544,18 @@ LAYER_RENDER.auth = () => {
     <div class="center">${m === 'signin' ? '<button class="link" data-act="auth-mode" data-val="reset">Forgot your password?</button>' : m === 'reset' ? '<button class="link" data-act="auth-mode" data-val="signin">Back to sign in</button>' : ''}</div>
     <p class="muted small center">We only use your email to sign you in. Your profiles and history sync to your account so you can use them on any device.</p>
   </div>`;
+};
+
+LAYER_RENDER.account = () => {
+  const u = auth.currentUser(), a = ui.auth;
+  return `<div class="sheet-head"><button class="icon-btn" data-act="close-layer" aria-label="Close">←</button><h2>Your details</h2></div>
+  <div class="pad"><form data-form="account" novalidate>
+    <label class="field"><span>Your name</span><input id="acctName" value="${esc(auth.accountName(u))}" maxlength="40" autocomplete="given-name" placeholder="What should we call you?"></label>
+    <label class="field"><span>Age (optional)</span><input id="acctAge" type="number" inputmode="numeric" min="1" max="120" value="${esc(u?.user_metadata?.age ?? '')}" placeholder="e.g. 28"></label>
+    <label class="field"><span>Email</span><input value="${esc(u?.email || '')}" disabled></label>
+    ${a.err ? `<p class="warn-box" role="alert">${esc(a.err)}</p>` : ''}
+    <button class="btn primary wide" type="submit" ${a.busy ? 'disabled' : ''}>${a.busy ? 'Saving…' : 'Save'}</button>
+  </form><p class="muted small center">Your name is used to greet you. Age is optional and only stored in your account.</p></div>`;
 };
 
 LAYER_RENDER.newpass = () => `<div class="sheet-head"><h2>Choose a new password</h2></div>
@@ -847,6 +862,7 @@ const ACTIONS = {
     ui.auth.err = '';
     try { await auth.signInWithApple(); } catch (e) { ui.auth.err = e.message; repaintTop(); }
   },
+  'edit-account': () => { ui.auth.err = ''; openLayer('account', null, { cls: 'small' }); },
   'sync-now': () => cloudPush(true),
   'sign-out': async () => { await auth.signOut(); toast('Signed out. Your data stays on this device.'); },
   'sign-out-clear': async () => {
@@ -892,12 +908,25 @@ const FORMS = {
     try {
       if (a.mode === 'reset') { await auth.resetPassword(email); a.msg = 'If that email has an account, a reset link is on its way. Check your inbox (and spam).'; }
       else if (a.mode === 'signup') {
-        const r = await auth.signUp(email, pw);
+        a.name = $('#authName') ? $('#authName').value.trim() : '';
+        const r = await auth.signUp(email, pw, a.name);
         if (r.needsConfirm) a.msg = 'Almost there! We sent a confirmation link to your email. Tap it, then come back and sign in.';
         else { a.busy = false; closeTop(); toast('Account created. Welcome! 🎉'); return; }
       } else { await auth.signIn(email, pw); a.busy = false; closeTop(); toast('Signed in 👋'); return; }
     } catch (e) { a.err = e.message; }
     a.busy = false; repaintTop();
+  },
+  account: async () => {
+    const name = $('#acctName').value.trim(), ageRaw = $('#acctAge').value.trim();
+    const age = ageRaw === '' ? null : Number(ageRaw);
+    if (age !== null && (!Number.isInteger(age) || age < 1 || age > 120)) { ui.auth.err = 'Please enter a valid age, or leave it blank.'; return repaintTop(); }
+    ui.auth.err = ''; ui.auth.busy = true; repaintTop();
+    try {
+      await auth.updateProfile({ name, age });
+      const p0 = state.profiles[0];
+      if (name && p0 && (p0.name === 'Me' || p0.name === 'Guest')) p0.name = name;
+      shuffleGreetings(); save(); ui.auth.busy = false; closeTop(); toast(name ? `Nice to meet you, ${name}! 👋` : 'Saved'); commit();
+    } catch (e) { ui.auth.busy = false; ui.auth.err = e.message; repaintTop(); }
   },
   newpass: async () => {
     const pw = $('#newPw').value;
@@ -1022,13 +1051,15 @@ async function cloudStart(user) {
   } catch (e) {
     ui.sync = { status: "Couldn't sync: " + e.message, err: true };
   }
-  render(); repaintTop();
+  shuffleGreetings(); render(); repaintTop();
+  if (!auth.accountName(user) && layerCount() === 0) { ui.auth.err = ''; openLayer('account', null, { cls: 'small' }); }
 }
 
 function initAccount() {
   auth.onAuth(async (event, user) => {
     if (event === 'PASSWORD_RECOVERY') { ui.auth.err = ''; openLayer('newpass', null, { cls: 'small' }); return; }
     if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && user && ui.syncedFor !== user.id) { ui.syncedFor = user.id; await cloudStart(user); }
+    else if (event === 'USER_UPDATED') { shuffleGreetings(); render(); }
     else if (event === 'SIGNED_OUT') { ui.syncedFor = null; hooks.afterSave = null; ui.sync = {}; render(); }
   });
   if (auth.shouldInit()) auth.getClient().catch(() => { /* offline: stay signed out until next load */ });

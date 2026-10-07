@@ -46,8 +46,8 @@ async function run(fn) {
   try { return await fn(await getClient()); } catch (e) { throw new Error(friendly(e)); }
 }
 
-export const signUp = (email, password) => run(async c => {
-  const { data, error } = await c.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + '/' } });
+export const signUp = (email, password, name = '') => run(async c => {
+  const { data, error } = await c.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + '/', data: name ? { name } : {} } });
   if (error) throw error;
   // Supabase hides "already registered" by returning a user with no identities
   if (data.user && data.user.identities && data.user.identities.length === 0) throw new Error('already registered');
@@ -63,6 +63,15 @@ export const signInWithApple = () => run(async c => {
   const { error } = await c.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: location.origin + '/' } });
   if (error) throw error;
 });
+
+/** Name and age live in the account's user metadata (no extra table needed). */
+export const updateProfile = ({ name, age }) => run(async c => {
+  const { data, error } = await c.auth.updateUser({ data: { name, age } });
+  if (error) throw error;
+  user = data.user || user;
+});
+
+export const accountName = u => String((u || user)?.user_metadata?.name || '').trim();
 
 export const signOut = () => run(async c => { await c.auth.signOut(); });
 
