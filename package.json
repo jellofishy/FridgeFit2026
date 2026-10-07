@@ -1,0 +1,12 @@
+{
+  "name": "fridge-fit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fridge Fit: scan your fridge, get recipes that fit your diet.",
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" }
+}

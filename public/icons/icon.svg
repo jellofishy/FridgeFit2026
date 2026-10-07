@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Fridge Fit">
+  <rect width="128" height="128" rx="30" fill="#ff6b4a"/>
+  <rect x="35" y="20" width="58" height="88" rx="10" fill="none" stroke="#fff" stroke-width="9"/>
+  <path d="M35 54h58" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M78 33v10M78 66v16" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+</svg>

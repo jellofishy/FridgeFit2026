@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fridge Fit</title>
+  <meta name="description" content="Scan your fridge, get recipes made from what you already have, and cook hands-free.">
+  <meta name="theme-color" content="#fff8f2">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    // Apply the saved theme before first paint so there is no light/dark flash.
+    try { var t = localStorage.getItem('fridgefit:theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="Fridge Fit home"><img src="/icons/icon.svg" alt="" width="30" height="30"><span>Fridge Fit</span></a>
+    <div class="top-actions">
+      <button id="shopBtn" class="icon-btn" aria-label="Shopping list">🛒<span id="shopBadge" class="badge-dot" hidden>0</span></button>
+      <button id="themeBtn" class="icon-btn" aria-label="Switch theme">🌙</button>
+    </div>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
+
+  <div id="layers"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <input id="fileCam" type="file" accept="image/*" capture="environment" hidden>
+  <input id="fileGallery" type="file" accept="image/*" hidden>
+  <noscript><p style="padding:2rem">Fridge Fit needs JavaScript to run.</p></noscript>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
