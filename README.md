@@ -67,7 +67,8 @@ Optional email + password accounts, powered by [Supabase](https://supabase.com).
   1. **Site URL**: set to your Netlify URL, e.g. `https://your-site.netlify.app`.
   2. **Redirect URLs**: add the same URL (and `http://localhost:8888` if you use `netlify dev`). Confirmation and password-reset emails link back here.
   3. (Optional) Authentication → Sign In / Providers → Email: turn off **Confirm email** for instant sign-up, or leave it on and users confirm via an emailed link.
-  4. (Recommended before launch) Authentication → SMTP Settings: add your own email provider. Supabase's built-in sender is limited to a few emails per hour and is meant for testing.
+  4. **Sign in with Apple (optional):** the "Continue with Apple" button is built in but only works after you set up Apple in Supabase (Authentication → Sign In / Providers → Apple). It requires a paid Apple Developer account. In Apple's developer portal create an App ID and a Services ID with "Sign in with Apple" enabled, add `https://zrnawkrnelbhaltlsdpv.supabase.co/auth/v1/callback` as its Return URL, create a Sign in with Apple key (.p8), then enter the Services ID, Team ID, Key ID and the generated secret in Supabase. Apple's secret expires every 6 months and must be regenerated.
+  5. (Recommended before launch) Authentication → SMTP Settings: add your own email provider. Supabase's built-in sender is limited to a few emails per hour and is meant for testing.
 
 ## Notes & limits
 

@@ -37,6 +37,7 @@ const friendly = e => {
   if (/already registered|already been registered/i.test(m)) return 'That email already has an account. Try signing in instead.';
   if (/rate limit|too many/i.test(m)) return 'Too many emails sent recently. Please wait a few minutes and try again.';
   if (/password/i.test(m) && /(short|least|weak)/i.test(m)) return 'Please use a longer password (at least 8 characters).';
+  if (/provider is not enabled|unsupported provider/i.test(m)) return 'Apple sign-in isn\'t switched on yet. The site owner needs to finish setting it up in Supabase.';
   if (/fetch|network/i.test(m)) return "Can't reach the server. Check your connection.";
   return m || 'Something went wrong. Please try again.';
 };
@@ -55,6 +56,11 @@ export const signUp = (email, password) => run(async c => {
 
 export const signIn = (email, password) => run(async c => {
   const { error } = await c.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+});
+
+export const signInWithApple = () => run(async c => {
+  const { error } = await c.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: location.origin + '/' } });
   if (error) throw error;
 });
 

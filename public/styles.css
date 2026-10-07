@@ -164,7 +164,7 @@ main { max-width: 720px; margin: 0 auto; padding: 4px 16px 24px; outline: none; 
 form.inline { display: flex; gap: 6px; align-items: center; } form.inline input { flex: 1; min-width: 0; }
 
 /* ---------- forms */
-input[type=text], input:not([type]), input[type=date], input[type=password], select {
+input[type=text], input[type=email], input:not([type]), input[type=date], input[type=password], select {
   border: 1.5px solid var(--border); background: var(--surface); border-radius: 14px; padding: 11px 14px; min-height: 46px; width: 100%;
 }
 input:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent); }
@@ -297,3 +297,6 @@ body:has(.cookmode.open) .toast { bottom: 150px; }
 .card.account { margin-top: 8px; } .card.account .btn { margin-top: 8px; } .card.account .small { margin: 4px 0 8px; }
 .warn-text { color: var(--danger); }
 .seg.wide-seg { display: flex; margin-bottom: 8px; } .seg.wide-seg button { flex: 1; padding: 10px; }
+.btn.apple { background: #000; color: #fff; margin-top: 4px; } :root[data-theme="dark"] .btn.apple { background: #fff; color: #000; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.apple { background: #fff; color: #000; } }
+.or { text-align: center; color: var(--muted); font-size: .85rem; margin: 12px 0; display: flex; align-items: center; gap: 10px; } .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border); }

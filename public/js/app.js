@@ -523,6 +523,7 @@ LAYER_RENDER.auth = () => {
   const title = m === 'signup' ? 'Create your account' : m === 'reset' ? 'Reset your password' : 'Welcome back';
   return `<div class="sheet-head"><button class="icon-btn" data-act="close-layer" aria-label="Close">←</button><h2>${title}</h2></div>
   <div class="pad">
+    ${m !== 'reset' ? `<button class="btn apple wide" type="button" data-act="apple-signin"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg> Continue with Apple</button><p class="or"><span>or use email</span></p>` : ''}
     ${m !== 'reset' ? `<div class="seg wide-seg" role="group" aria-label="Sign in or create account"><button class="${m === 'signin' ? 'on' : ''}" data-act="auth-mode" data-val="signin">Sign in</button><button class="${m === 'signup' ? 'on' : ''}" data-act="auth-mode" data-val="signup">Create account</button></div>` : '<p class="muted">Enter your email and we\'ll send you a link to choose a new password.</p>'}
     <form data-form="auth" autocomplete="on" novalidate>
       <label class="field"><span>Email</span><input id="authEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" required value="${esc(a.email)}" placeholder="you@example.com"></label>
@@ -835,6 +836,10 @@ const ACTIONS = {
   },
   'open-auth': () => { ui.auth = { mode: 'signin', busy: false, msg: '', err: '', email: ui.auth.email }; openLayer('auth', null, { cls: 'small' }); },
   'auth-mode': el => { ui.auth = { ...ui.auth, mode: el.dataset.val, msg: '', err: '', email: $('#authEmail')?.value || ui.auth.email }; repaintTop(); },
+  'apple-signin': async () => {
+    ui.auth.err = '';
+    try { await auth.signInWithApple(); } catch (e) { ui.auth.err = e.message; repaintTop(); }
+  },
   'sync-now': () => cloudPush(true),
   'sign-out': async () => { await auth.signOut(); toast('Signed out. Your data stays on this device.'); },
   'sign-out-clear': async () => {
